@@ -1,6 +1,7 @@
 import pygame
 import sys
 import random
+import math  # Import math for rotation
 
 # Initialize Pygame
 pygame.init()
@@ -13,19 +14,31 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption('Flippy Bird')  # Changed caption back
 
 # Bird
-bird_surface = pygame.Surface((50, 50))
-bird_surface.fill((255, 255, 0))  # Yellow color
+# Add SRCALPHA for transparency
+bird_surface = pygame.Surface((50, 50), pygame.SRCALPHA)
+pygame.draw.ellipse(bird_surface, (255, 255, 0),
+                    (0, 0, 50, 50))  # Draw yellow ellipse
+
+# Draw the red beak onto the bird_surface
+beak_width = 15
+beak_height = 8
+# Position the beak relative to the ellipse on the surface
+# The ellipse is drawn at (0, 0) on the 50x50 surface
+# Position at the right edge of the 50x50 surface
+beak_x_on_surface = 50 - beak_width
+# Vertically center on the 50x50 surface
+beak_y_on_surface = (50 - beak_height) // 2
+pygame.draw.rect(bird_surface, (255, 0, 0), (beak_x_on_surface,
+                 beak_y_on_surface, beak_width, beak_height))
+
 bird_rect = bird_surface.get_rect(center=(100, screen_height // 2))
 
 # Pipes
 pipe_width = 70
-pipe_gap = 400  # Gap between top and bottom pipe
+pipe_gap = 250  # Increased gap between top and bottom pipe
 pipe_list = []
-# Height doesn't matter much here
-pipe_surface = pygame.Surface((pipe_width, 500))
-pipe_surface.fill((0, 255, 0))  # Green color
-# Possible y-coordinates for the bottom pipe's top
-pipe_height = [400, 500, 600, 700, 800]
+pipe_color = (0, 255, 0)  # Green color
+min_pipe_height = 50  # Minimum height for a pipe segment
 
 # Timer for pipes
 SPAWNPIPE = pygame.USEREVENT
@@ -39,12 +52,20 @@ bird_movement = 0
 
 
 def create_pipe():
-    random_pipe_pos = random.choice(pipe_height)
-    bottom_pipe = pipe_surface.get_rect(
-        midtop=(screen_width + 50, random_pipe_pos))  # Start off-screen right
-    top_pipe = pipe_surface.get_rect(midbottom=(
-        screen_width + 50, random_pipe_pos - pipe_gap))
-    return bottom_pipe, top_pipe
+    # Calculate available vertical space for pipes
+    available_space = screen_height - pipe_gap
+    # Choose a random height for the top pipe segment
+    top_pipe_height = random.randint(
+        min_pipe_height, available_space - min_pipe_height)
+    # Calculate the height of the bottom pipe segment
+    bottom_pipe_height = available_space - top_pipe_height
+
+    # Create rectangles for the top and bottom pipes
+    top_pipe = pygame.Rect(screen_width + 50, 0, pipe_width, top_pipe_height)
+    bottom_pipe = pygame.Rect(
+        screen_width + 50, top_pipe_height + pipe_gap, pipe_width, bottom_pipe_height)
+
+    return top_pipe, bottom_pipe
 
 
 def move_pipes(pipes):
@@ -57,7 +78,7 @@ def move_pipes(pipes):
 
 def draw_pipes(pipes):
     for pipe in pipes:
-        screen.blit(pipe_surface, pipe)
+        pygame.draw.rect(screen, pipe_color, pipe)  # Draw rectangles directly
 
 
 def check_collision(pipes):
@@ -86,12 +107,15 @@ while True:
             pygame.quit()
             sys.exit()
         if event.type == pygame.KEYDOWN:
+            # Debug print
+            print(f"KEYDOWN event: key={event.key}, game_active={game_active}")
             if event.key == pygame.K_SPACE:
                 if game_active:
                     bird_movement = 0
                     bird_movement -= 12  # Adjust jump strength as needed
             # Restart game on 'R' key press
             if event.key == pygame.K_r and not game_active:
+                print("Restarting game...")  # Debug print
                 game_active = True
                 pipe_list.clear()
                 bird_rect.center = (100, screen_height // 2)
@@ -122,7 +146,16 @@ while True:
                 score += 1
 
         # Drawing (Active Game)
-        screen.blit(bird_surface, bird_rect)
+        # Calculate rotation angle based on bird_movement
+        # Cap angle between -90 and 45 degrees
+        angle = max(-90, min(45, bird_movement * -5))
+
+        # Rotate the bird surface
+        rotated_bird_surface = pygame.transform.rotate(bird_surface, angle)
+        rotated_bird_rect = rotated_bird_surface.get_rect(
+            center=bird_rect.center)
+
+        screen.blit(rotated_bird_surface, rotated_bird_rect)
 
         # Display score
         score_surface = font.render(
