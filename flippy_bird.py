@@ -143,7 +143,15 @@ while True:
             f"Score: {score}", True, (255, 255, 255))
         score_rect = score_surface.get_rect(
             center=(screen_width // 2, screen_height // 2 + 50))
+
         screen.blit(score_surface, score_rect)
+
+        # Display restart message
+        restart_surface = font.render(
+            "Press 'R' to Restart", True, (255, 255, 255))
+        restart_rect = restart_surface.get_rect(
+            center=(screen_width // 2, screen_height // 2 + 100))
+        screen.blit(restart_surface, restart_rect)
 
     # Update display
     pygame.display.update()
